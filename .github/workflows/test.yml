@@ -1,0 +1,15 @@
+name: Local delivery workflow
+on: [push, pull_request]
+jobs:
+  integration:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: Prepare emulator directory
+        run: sudo install -d -o 1000 -g 1000 .aws-emulator
+      - run: docker compose up -d --build
+      - run: docker compose run --rm sqs-smoke
+      - run: docker compose exec -T worker node dist/demo-test.js
+      - if: failure()
+        run: docker compose logs api worker
