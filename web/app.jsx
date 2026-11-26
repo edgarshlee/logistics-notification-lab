@@ -34,36 +34,30 @@ function App() {
   const tabs = [
     ["shipments", "운영자", null],
     ["notifications", "수신자 알림함", <Badge key="b" count={summary?.unread} tone="info" label="읽지 않은 알림" />],
-    ["operations", "알림 운영 · SQS", <Badge key="b" count={summary?.queue?.dead} tone="alarm" label="DLQ 대기" />],
+    ["operations", "알림 운영", <Badge key="b" count={summary?.queue?.dead} tone="alarm" label="DLQ 대기" />],
   ];
   return (
     <>
-      <header>
-        <strong>
+      <header className="topbar">
+        <a className="brand" href="#shipments">
           <span className="mark" aria-hidden="true">
             ⇄
-          </span>{" "}
+          </span>
           운송 데스크
-        </strong>
-        <nav>
+        </a>
+        <nav aria-label="화면">
           {tabs.map(([v, label, badge]) => (
-            <button
-              key={v}
-              aria-pressed={v === view}
-              onClick={() => {
-                location.hash = v;
-              }}
-            >
+            <a key={v} href={"#" + v} aria-current={v === view ? "page" : undefined}>
               {label}
               {badge}
-            </button>
+            </a>
           ))}
         </nav>
+        <StatusBar summary={summary} error={error} />
       </header>
       <main>
-        <StatusBar summary={summary} error={error} />
         {view === "operations" ? (
-          <Operations />
+          <Operations summary={summary} />
         ) : view === "shipments" ? (
           <Shipments selectedId={route.id} onChange={reload} />
         ) : (

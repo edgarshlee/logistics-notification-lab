@@ -37,11 +37,21 @@ export default function ShipmentDetail({ id, onChange }) {
   return (
     <div className="panel">
       <BackLink />
-      <small className="mono">운송 번호 {shipment.id}</small>
-      <h2>
-        {shipment.destination}{" "}
-        <span className={"status " + shipment.status}>{statusNames[shipment.status]}</span>
-      </h2>
+      <h2>{shipment.destination}</h2>
+      <dl className="facts">
+        <div>
+          <dt>현재 상태</dt>
+          <dd>
+            <span className="state" data-status={shipment.status}>
+              {statusNames[shipment.status]}
+            </span>
+          </dd>
+        </div>
+        <div>
+          <dt>운송 번호</dt>
+          <dd className="id">{shipment.id}</dd>
+        </div>
+      </dl>
       {notice && <p className="notice">{notice}</p>}
       {error && <p role="alert">{error}</p>}
       {reason === null ? (
@@ -49,6 +59,7 @@ export default function ShipmentDetail({ id, onChange }) {
           {statusActions[shipment.status].map(([status, label]) => (
             <button
               key={status}
+              className={status === "exception" ? "caution" : "primary"}
               disabled={busy}
               onClick={() => (status === "exception" ? setReason("") : change(status))}
             >
@@ -77,13 +88,15 @@ export default function ShipmentDetail({ id, onChange }) {
             value={reason}
             onChange={(e) => setReason(e.target.value)}
           />
-          <button disabled={busy}>예외 등록</button>
+          <button className="caution" disabled={busy}>
+            예외 등록
+          </button>
           <button type="button" className="plain" onClick={() => setReason(null)}>
             취소
           </button>
         </form>
       )}
-      <h3>추적 타임라인</h3>
+      <h3>상태 이력과 알림 경로</h3>
       <Timeline history={history} />
     </div>
   );
@@ -92,7 +105,7 @@ export default function ShipmentDetail({ id, onChange }) {
 function BackLink() {
   return (
     <a className="back" href="#shipments">
-      ← 목록
+      목록으로
     </a>
   );
 }

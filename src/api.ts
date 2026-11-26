@@ -141,7 +141,8 @@ class LogisticsController {
     const [snapshot, events, replays] = await Promise.all([
       db.query("SELECT sample,sampled_at FROM queue_snapshot"),
       db.query(`SELECT o.id,s.destination,o.payload->>'eventType' AS type,o.published_at,
-        n.event_id IS NOT NULL AS stored,n.stored_at FROM outbox o
+        o.payload->>'occurredAt' AS occurred_at,o.attempts,o.next_attempt,
+        n.event_id IS NOT NULL AS stored,n.stored_at,n.read_at FROM outbox o
         JOIN shipments s ON s.id=(o.payload->>'shipmentId')::uuid
         LEFT JOIN notifications n ON n.event_id=o.id AND n.recipient=o.payload->>'recipientId'
         ORDER BY (o.payload->>'occurredAt')::timestamptz DESC LIMIT 15`),

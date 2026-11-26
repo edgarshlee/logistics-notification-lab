@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { api, useAction, usePoll } from "../lib/api";
-import { dateTime, eventMessages } from "../lib/labels";
+import { ago, dateTime, eventMessages } from "../lib/labels";
 
 export default function Inbox({ onChange }) {
   const { data, error: loadError, reload } = usePoll("notifications");
@@ -10,49 +10,61 @@ export default function Inbox({ onChange }) {
   });
   const [unreadOnly, setUnreadOnly] = useState(false);
   const inbox = data || [];
+  const unread = inbox.filter((n) => !n.read_at).length;
+  const visible = inbox.filter((n) => !unreadOnly || !n.read_at);
+  const now = Date.now();
   return (
     <>
-      {(error || loadError) && <p role="alert">{error || loadError}</p>}
-      <section className="mast">
+      <div className="pagehead">
         <h1>수신자 알림함</h1>
-        <p>읽지 않은 알림 {inbox.filter((n) => !n.read_at).length}건</p>
-      </section>
-      <div className="filters">
-        <button aria-pressed={!unreadOnly} onClick={() => setUnreadOnly(false)}>
-          전체 알림
-        </button>
-        <button aria-pressed={unreadOnly} onClick={() => setUnreadOnly(true)}>
-          읽지 않음
-        </button>
+        <p className="lede">
+          가상 수신자 한 명의 알림입니다. 읽지 않은 알림 <b>{unread}</b>건
+        </p>
       </div>
-      {unreadOnly && inbox.length > 0 && inbox.every((n) => n.read_at) && (
+      {(error || loadError) && <p role="alert">{error || loadError}</p>}
+      <div className="toolbar">
+        <div className="segmented" role="group" aria-label="알림 필터">
+          <button aria-pressed={!unreadOnly} onClick={() => setUnreadOnly(false)}>
+            전체 {inbox.length}
+          </button>
+          <button aria-pressed={unreadOnly} onClick={() => setUnreadOnly(true)}>
+            읽지 않음 {unread}
+          </button>
+        </div>
+      </div>
+      {data && !inbox.length && (
+        <p className="empty">아직 알림이 없습니다. 운영자 화면에서 배송을 시작하면 몇 초 뒤 여기에 도착합니다.</p>
+      )}
+      {data && inbox.length > 0 && !visible.length && (
         <p className="empty">모든 알림을 읽었습니다.</p>
       )}
-      {data && !inbox.length && (
-        <p>운영자 화면에서 배송을 시작하면 첫 알림이 도착합니다.</p>
-      )}
-      {inbox
-        .filter((n) => !unreadOnly || !n.read_at)
-        .map((n) => (
-          <article key={n.event_id} className={n.read_at ? "read" : "unread"}>
-            <small>{dateTime(n.occurred_at)}</small>
-            <b>{n.destination}</b>
-            <p>
-              {eventMessages[n.event_type]}
-              {n.detail && <span className="reason-text"> 사유: {n.detail}</span>}
-            </p>
+      <ul className="inbox">
+        {visible.map((n) => (
+          <li key={n.event_id} className={n.read_at ? "read" : "unread"}>
+            <span className="dot" aria-hidden="true" />
+            <div className="msg">
+              <b>{n.destination}</b>
+              <p>
+                {eventMessages[n.event_type]}
+                {n.detail && <span className="reason-text"> 사유: {n.detail}</span>}
+              </p>
+            </div>
+            <time dateTime={n.occurred_at} title={dateTime(n.occurred_at)}>
+              {ago(n.occurred_at, now)}
+            </time>
             {n.read_at ? (
-              "읽음"
+              <span className="read-mark">읽음</span>
             ) : (
               <button
                 disabled={busy}
                 onClick={() => act(() => api("notifications/" + n.event_id + "/read", "PATCH"))}
               >
-                읽음 처리
+                읽음으로 표시
               </button>
             )}
-          </article>
+          </li>
         ))}
+      </ul>
     </>
   );
 }

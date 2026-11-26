@@ -29,10 +29,10 @@ export default function Shipments({ selectedId, onChange }) {
   const now = Date.now();
   return (
     <>
-      {(error || loadError) && <p role="alert">{error || loadError}</p>}
-      <section className="mast">
+      <div className="pagehead">
         <h1>배송 현황</h1>
         <form
+          className="register"
           onSubmit={(e) => {
             e.preventDefault();
             act(async () => {
@@ -45,24 +45,31 @@ export default function Shipments({ selectedId, onChange }) {
           <label htmlFor="destination">새 배송 도착지</label>
           <input
             id="destination"
-            aria-label="도착지"
-            placeholder="도착지 입력"
+            placeholder="예: 부산 물류센터"
             required
             maxLength={100}
             value={dest}
             onChange={(e) => setDest(e.target.value)}
           />
-          <button disabled={busy}>배송 등록</button>
+          <button className="primary" disabled={busy}>
+            배송 등록
+          </button>
         </form>
-      </section>
+      </div>
+      {(error || loadError) && <p role="alert">{error || loadError}</p>}
       <div className="toolbar">
-        <div className="filters" aria-label="배송 상태 필터">
+        <div className="board" role="group" aria-label="상태별 배송 수와 필터">
           {Object.entries({ all: "전체", ...statusNames }).map(([key, label]) => (
-            <button key={key} aria-pressed={filter === key} onClick={() => setFilter(key)}>
-              {label}{" "}
-              <span>
+            <button
+              key={key}
+              data-status={key}
+              aria-pressed={filter === key}
+              onClick={() => setFilter(key)}
+            >
+              <span className="board-count">
                 {shipments.filter((s) => key === "all" || s.status === key).length}
               </span>
+              <span className="board-label">{label}</span>
             </button>
           ))}
         </div>
@@ -70,7 +77,7 @@ export default function Shipments({ selectedId, onChange }) {
           type="search"
           className="search"
           aria-label="배송 검색"
-          placeholder="도착지·운송 번호 검색"
+          placeholder="도착지 또는 운송 번호"
           maxLength={100}
           value={query}
           onChange={(e) => setQuery(e.target.value)}
@@ -80,7 +87,9 @@ export default function Shipments({ selectedId, onChange }) {
         <div className="list">
           {data && !visible.length ? (
             <p className="empty">
-              {term ? `'${term}'에 해당하는 배송이 없습니다.` : "해당 상태의 배송이 없습니다."}
+              {term
+                ? `'${term}'와 일치하는 배송이 없습니다. 도착지 일부나 운송 번호 앞자리로 검색하세요.`
+                : "이 상태의 배송이 없습니다. 위에서 도착지를 입력해 배송을 등록하세요."}
             </p>
           ) : (
             <table>
@@ -99,16 +108,18 @@ export default function Shipments({ selectedId, onChange }) {
                     aria-current={s.id === selectedId || undefined}
                     onClick={() => open(s.id)}
                   >
-                    <td className="mono">{s.id.slice(0, 8)}</td>
-                    <td>
+                    <td className="id">{s.id.slice(0, 8)}</td>
+                    <td className="dest">
                       <a href={"#shipments/" + s.id} onClick={(e) => e.stopPropagation()}>
                         {s.destination}
                       </a>
                     </td>
                     <td>
-                      <span className={"status " + s.status}>{statusNames[s.status]}</span>
+                      <span className="state" data-status={s.status}>
+                        {statusNames[s.status]}
+                      </span>
                     </td>
-                    <td title={new Date(s.updated_at).toLocaleString("ko-KR")}>
+                    <td className="when" title={new Date(s.updated_at).toLocaleString("ko-KR")}>
                       {ago(s.updated_at, now)}
                     </td>
                   </tr>
@@ -117,13 +128,16 @@ export default function Shipments({ selectedId, onChange }) {
             </table>
           )}
         </div>
-        <aside className="detail">
+        <aside className="detail" aria-label="배송 상세">
           {selectedId ? (
             <ShipmentDetail key={selectedId} id={selectedId} onChange={refresh} />
           ) : (
-            <p className="hint">
-              배송을 선택하면 상태 이력과 알림 전달 과정을 추적 타임라인으로 볼 수 있습니다.
-            </p>
+            <div className="panel hint">
+              <p>
+                목록에서 배송을 고르면 상태 이력과, 각 알림이 기록·발행·저장·읽음을 거쳐 간
+                경로를 볼 수 있습니다.
+              </p>
+            </div>
           )}
         </aside>
       </div>
