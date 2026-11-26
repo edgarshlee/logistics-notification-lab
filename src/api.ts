@@ -220,6 +220,14 @@ class LogisticsController {
     );
   }
 
+  @Patch("notifications/read-all")
+  async readAll() {
+    const [, count] = await db.query(
+      "UPDATE notifications SET read_at=now() WHERE recipient='demo' AND read_at IS NULL",
+    );
+    return { read: count };
+  }
+
   @Patch("notifications/:id/read")
   async read(@Param("id", ParseUUIDPipe) id: string) {
     const result = await db.query(

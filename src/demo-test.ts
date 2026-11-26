@@ -107,6 +107,13 @@ async function test() {
       ? true
       : undefined;
   }, "three distinct alerts including read receipt");
+  const readAll = await request("notifications/read-all", "PATCH");
+  assert.equal(readAll.status, 200);
+  assert.ok((await readAll.json()).read >= 2, "read-all marks the unread alerts");
+  const mine = (await (await request("notifications")).json()).filter(
+    (n: any) => n.shipment_id === shipment.id,
+  );
+  assert.ok(mine.every((n: any) => n.read_at));
   console.log(
     "PASS shipment lifecycle, concurrent transitions, inbox and read receipt",
   );

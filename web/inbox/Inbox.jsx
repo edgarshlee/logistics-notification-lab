@@ -31,6 +31,12 @@ export default function Inbox({ onChange }) {
             읽지 않음 {unread}
           </button>
         </div>
+        <button
+          disabled={busy || !unread}
+          onClick={() => act(() => api("notifications/read-all", "PATCH"))}
+        >
+          모두 읽음으로 표시
+        </button>
       </div>
       {data && !inbox.length && (
         <p className="empty">아직 알림이 없습니다. 운영자 화면에서 배송을 시작하면 몇 초 뒤 여기에 도착합니다.</p>
