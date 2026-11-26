@@ -116,6 +116,22 @@ class LogisticsController {
     return { snapshot: snapshot[0] || null, events, replays };
   }
 
+  @Get("summary")
+  async summary() {
+    const [row] = await db.query(`SELECT
+      (SELECT count(*)::int FROM notifications WHERE recipient='demo' AND read_at IS NULL) AS unread,
+      (SELECT count(*)::int FROM outbox WHERE published_at IS NULL) AS pending_outbox,
+      q.sample, q.sampled_at, extract(epoch FROM now()-q.sampled_at)::float8 AS sample_age
+      FROM (SELECT 1) one LEFT JOIN queue_snapshot q ON true`);
+    return {
+      unread: row.unread,
+      pendingOutbox: row.pending_outbox,
+      queue: row.sample,
+      sampledAt: row.sampled_at,
+      sampleAge: row.sample_age,
+    };
+  }
+
   @Get("notifications")
   inbox() {
     return db.query(

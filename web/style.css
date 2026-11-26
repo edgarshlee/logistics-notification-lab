@@ -85,13 +85,13 @@ main {
   padding-top: 0;
 }
 .mast {
-  padding: clamp(24px, 4vw, 42px);
+  padding: clamp(20px, 3vw, 32px) clamp(24px, 4vw, 42px);
   background: linear-gradient(110deg, #153a55 55%, #205c78);
   color: white;
   border-radius: 16px 16px 3px 3px;
 }
 h1 {
-  font-size: clamp(32px, 5vw, 50px);
+  font-size: clamp(30px, 4.4vw, 42px);
   letter-spacing: -0.07em;
   margin: 0 0 18px;
   line-height: 1.15;
@@ -252,4 +252,63 @@ article {
 }
 h2 {
   margin: 26px 0 8px;
+}
+
+.statusbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 18px;
+  margin: 0 0 12px;
+  padding: 8px 14px;
+  border-radius: 8px;
+  background: white;
+  border: 1px solid var(--line);
+  font-size: 14px;
+  font-variant-numeric: tabular-nums;
+}
+.statusbar span:first-child::before {
+  content: "";
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  margin-right: 7px;
+  border-radius: 50%;
+  background: #2f9b6a;
+  vertical-align: 1px;
+}
+.statusbar.warn {
+  background: #fff6e8;
+  border-color: #f0c98a;
+  color: #794208;
+}
+.statusbar.warn span:first-child::before {
+  background: #d9822b;
+}
+.statusbar .alarm {
+  color: #8a2618;
+  font-weight: 700;
+}
+.badge {
+  display: inline-block;
+  min-width: 22px;
+  margin-left: 7px;
+  padding: 0 6px;
+  border-radius: 11px;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 22px;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+.badge.info {
+  background: #176293;
+  color: white;
+}
+.badge.alarm {
+  background: #c2412d;
+  color: white;
+}
+button[aria-pressed="true"] .badge.info {
+  background: #aee6f2;
+  color: #153a55;
 }

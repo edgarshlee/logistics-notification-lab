@@ -150,12 +150,13 @@ CREATE TABLE IF NOT EXISTS lab_commands (id bigserial PRIMARY KEY, kind text NOT
 
 ```
 web/
-  app.jsx            라우팅(hash), 상단 바, 토스트
-  lib/api.js         fetch 래퍼(비 JSON 오류 응답 처리 포함), usePoll
+  app.jsx            라우팅(hash), 상단 탭·배지
+  StatusBar.jsx      워커·아웃박스·큐 상태 바 (GET /api/summary)
+  lib/api.js         fetch 래퍼(비 JSON 오류 응답 처리 포함), usePoll, useAction
   lib/labels.js      상태·이벤트 이름, 메시지
-  shipments/         ShipmentTable, ShipmentDetail, Timeline, NewShipmentForm
+  shipments/         Shipments, History  → 2단계: ShipmentTable, ShipmentDetail, Timeline, NewShipmentForm
   inbox/             Inbox
-  operations/        QueueMetrics, FaultSwitch, DlqList, EventFlowTable, ConsumeLog
+  operations/        Operations          → 4단계: QueueMetrics, FaultSwitch, DlqList, EventFlowTable, ConsumeLog
 ```
 
 빌드는 지금처럼 esbuild 한 번으로 번들하므로 별도 도구는 추가하지 않는다.
@@ -164,7 +165,7 @@ web/
 
 | 단계 | 범위 | 완료 기준 |
 | --- | --- | --- |
-| **1. 구조 정리** | 프런트 파일 분리, `api`/`usePoll` 공통화, 상단 배지·상태 바(B3) | 기존 기능이 동일하게 동작, 빌드·`demo-test` 통과 |
+| **1. 구조 정리** ✅ 2026-11-26 | 프런트 파일 분리, `api`/`usePoll` 공통화, 상단 배지·상태 바(B3) | 기존 기능이 동일하게 동작, 빌드·`demo-test` 통과 |
 | **2. 운영자 화면** | 표 + 상세 2단, 추적 타임라인(A1), 예외 사유(A2, B2), 검색(A3), 충돌 UX(A4) | 배송 하나의 상태·이벤트·알림을 상세 패널에서 모두 확인 |
 | **3. 알림함** | 모두 읽음(B1), 날짜 그룹, 맥락 메시지, 현재 상태 펼침 | 예외 사유가 알림함에 표시되고 "모두 읽음" 후 배지 0 |
 | **4. 장애 실험실** | C1~C7 | 4장 시나리오 5단계를 화면 클릭만으로 재현 |
