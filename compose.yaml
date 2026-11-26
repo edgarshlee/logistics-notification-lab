@@ -53,7 +53,7 @@ services:
 
   sqs-smoke:
     profiles: [test]
-    image: public.ecr.aws/aws-cli/aws-cli:2.35.0
+    image: amazon/aws-cli:2.35.0
     network_mode: service:aws-emulator
     entrypoint: ["/bin/sh", "/tests/sqs-smoke.sh"]
     environment:
