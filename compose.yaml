@@ -1,0 +1,73 @@
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: logistics
+      POSTGRES_PASSWORD: local-demo
+    volumes:
+      - shipment-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d logistics"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+
+  api:
+    build: .
+    image: logistics-lab-app
+    ports: ["127.0.0.1:3180:3000"]
+    depends_on:
+      db: {condition: service_healthy}
+    environment:
+      DATABASE_URL: postgres://postgres:local-demo@db:5432/logistics
+
+  worker:
+    image: logistics-lab-app
+    depends_on:
+      api: {condition: service_started}
+    network_mode: service:aws-emulator
+    command: ["node","dist/worker.js"]
+    restart: on-failure
+    environment:
+      DATABASE_URL: postgres://postgres:local-demo@db:5432/logistics
+      AWS_ENDPOINT_URL: https://127.0.0.1:9297
+      AWS_REGION: us-east-1
+      AWS_SHARED_CREDENTIALS_FILE: /emulator/9297/emulator_credentials
+      NODE_EXTRA_CA_CERTS: /emulator/9297/ca.pem
+    volumes:
+      - ./.aws-emulator:/emulator:ro
+
+  aws-emulator:
+    build:
+      context: ./infra/aws-emulator
+      args:
+        RPM_ARCH: ${AWS_EMULATOR_RPM_ARCH:-x86_64}
+    ports:
+      - "127.0.0.1:9297:9297"
+    environment:
+      EMULATOR_TELEMETRY: "off"
+    volumes:
+      - ./.aws-emulator:/home/emulator/.aws/emulator
+    mem_limit: 2g
+    memswap_limit: 2g
+
+  sqs-smoke:
+    profiles: [test]
+    image: public.ecr.aws/aws-cli/aws-cli:2.35.0
+    network_mode: service:aws-emulator
+    entrypoint: ["/bin/sh", "/tests/sqs-smoke.sh"]
+    environment:
+      AWS_ENDPOINT_URL: https://127.0.0.1:9297
+      AWS_REGION: us-east-1
+      AWS_DEFAULT_REGION: us-east-1
+      AWS_EC2_METADATA_DISABLED: "true"
+      AWS_MAX_ATTEMPTS: "1"
+      AWS_SHARED_CREDENTIALS_FILE: /home/emulator/.aws/emulator/9297/emulator_credentials
+      AWS_CONFIG_FILE: /home/emulator/.aws/emulator/9297/config
+      AWS_CA_BUNDLE: /home/emulator/.aws/emulator/9297/ca.pem
+    volumes:
+      - ./.aws-emulator:/home/emulator/.aws/emulator:ro
+      - ./scripts/sqs-smoke.sh:/tests/sqs-smoke.sh:ro
+
+volumes:
+  shipment-data:
