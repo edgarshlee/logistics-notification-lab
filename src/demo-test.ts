@@ -158,6 +158,64 @@ async function test() {
     delayed.eventId,
   ]);
   console.log("PASS DLQ routing and selective replay");
+
+  // 같은 복구를 화면이 쓰는 장애 실험실 API로 재현한다.
+  const fault = (value: string) => request("lab/fault", "PUT", { value });
+  assert.equal((await fault("sometimes")).status, 400);
+  try {
+    assert.equal((await fault("consume")).status, 200);
+    const lab = await (
+      await request("shipments", "POST", { destination: "장애 실험 센터" })
+    ).json();
+    assert.equal(
+      (await request("shipments/" + lab.id, "PATCH", { status: "in_transit", version: 1 }))
+        .status,
+      200,
+    );
+    const [{ id: labEvent }] = await db.query(
+      "SELECT id FROM outbox WHERE payload->>'shipmentId'=$1",
+      [lab.id],
+    );
+    const inDlq = async () =>
+      (await db.query("SELECT 1 FROM dlq_messages WHERE event_id=$1", [labEvent])).length
+        ? true
+        : undefined;
+    await until(inDlq, "fault-injected event in DLQ", 90000);
+    assert.equal(
+      (await db.query(
+        "SELECT count(*)::int AS n FROM consume_log WHERE event_id=$1 AND action='failed'",
+        [labEvent],
+      ))[0].n,
+      3,
+    );
+    assert.equal((await fault("none")).status, 200);
+    const replay = () => request("lab/commands", "POST", { kind: "replay", eventId: labEvent });
+    assert.equal((await replay()).status, 201);
+    await until(() => findNotice(labEvent), "notification after replay from the lab", 30000);
+    assert.equal(await inDlq(), undefined);
+    assert.equal((await replay()).status, 404, "replay needs a message in the DLQ");
+    assert.equal(
+      (await request("lab/commands", "POST", { kind: "duplicate", eventId: labEvent })).status,
+      201,
+    );
+    await until(
+      async () =>
+        (await db.query(
+          "SELECT 1 FROM consume_log WHERE event_id=$1 AND action='duplicate'",
+          [labEvent],
+        )).length
+          ? true
+          : undefined,
+      "duplicate delivery logged",
+    );
+    const copies = (await (await request("notifications")).json()).filter(
+      (n: any) => n.event_id === labEvent,
+    );
+    assert.equal(copies.length, 1);
+    console.log("PASS fault lab: injected failure, replay and duplicate delivery");
+  } finally {
+    await fault("none");
+  }
 }
 test()
   .catch((error) => {

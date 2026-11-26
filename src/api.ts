@@ -10,6 +10,7 @@ import {
   ParseUUIDPipe,
   Patch,
   Post,
+  Put,
   Query,
 } from "@nestjs/common";
 import { NestFactory } from "@nestjs/core";
@@ -148,7 +149,52 @@ class LogisticsController {
         ORDER BY (o.payload->>'occurredAt')::timestamptz DESC LIMIT 15`),
       db.query("SELECT * FROM dlq_replays ORDER BY observed_at DESC LIMIT 5"),
     ]);
-    return { snapshot: snapshot[0] || null, events, replays };
+    const [[setting], dlq, log, pending] = await Promise.all([
+      db.query("SELECT value FROM lab_settings WHERE key='fault'"),
+      db.query(`SELECT d.event_id,d.seen_at,d.body->>'eventType' AS type,s.destination FROM dlq_messages d
+        LEFT JOIN shipments s ON s.id::text=d.body->>'shipmentId' ORDER BY d.seen_at`),
+      db.query(`SELECT l.*,s.destination FROM consume_log l
+        LEFT JOIN outbox o ON o.id=l.event_id LEFT JOIN shipments s ON s.id::text=o.payload->>'shipmentId'
+        ORDER BY l.id DESC LIMIT 20`),
+      db.query(`SELECT DISTINCT ON (event_id,kind) event_id,kind,done_at,error FROM lab_commands
+        WHERE requested_at > now() - interval '1 minute' ORDER BY event_id,kind,id DESC`),
+    ]);
+    return { snapshot: snapshot[0] || null, events, replays, fault: setting?.value || "none", dlq, log, commands: pending };
+  }
+
+  @Put("lab/fault")
+  async setFault(@Body("value") value: unknown) {
+    if (value !== "none" && value !== "consume" && value !== "publish")
+      throw new BadRequestException("장애 주입 값은 none, consume, publish 중 하나입니다.");
+    await db.query(
+      "INSERT INTO lab_settings(key,value) VALUES ('fault',$1) ON CONFLICT (key) DO UPDATE SET value=excluded.value",
+      [value],
+    );
+    return { fault: value };
+  }
+
+  @Post("lab/commands")
+  async command(@Body() input: { kind?: unknown; eventId?: unknown }) {
+    const { kind, eventId } = input;
+    if (kind !== "replay" && kind !== "duplicate")
+      throw new BadRequestException("kind는 replay 또는 duplicate입니다.");
+    if (typeof eventId !== "string" || !/^[0-9a-f-]{36}$/i.test(eventId))
+      throw new BadRequestException("eventId는 UUID여야 합니다.");
+    const [exists] = await db.query(
+      kind === "replay"
+        ? "SELECT 1 FROM dlq_messages WHERE event_id=$1"
+        : "SELECT 1 FROM outbox WHERE id=$1 AND published_at IS NOT NULL",
+      [eventId],
+    );
+    if (!exists)
+      throw new NotFoundException(
+        kind === "replay" ? "DLQ에 없는 이벤트입니다." : "발행된 이벤트만 다시 전달할 수 있습니다.",
+      );
+    const [row] = await db.query(
+      "INSERT INTO lab_commands(kind,event_id) VALUES ($1,$2) RETURNING id",
+      [kind, eventId],
+    );
+    return row;
   }
 
   @Get("summary")

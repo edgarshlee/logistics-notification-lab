@@ -45,6 +45,14 @@ export async function migrate() {
       ALTER TABLE notifications ADD COLUMN IF NOT EXISTS detail text;
       CREATE INDEX IF NOT EXISTS outbox_shipment_version
         ON outbox (((payload->>'shipmentId')::uuid), ((payload->>'shipmentVersion')::int))`);
+    // 장애 실험실: API는 요청을 기록만 하고 SQS 작업은 워커가 수행한다.
+    await tx.query(`CREATE TABLE IF NOT EXISTS lab_settings (key text PRIMARY KEY, value text NOT NULL);
+      CREATE TABLE IF NOT EXISTS lab_commands (id bigserial PRIMARY KEY, kind text NOT NULL, event_id uuid NOT NULL,
+        requested_at timestamptz NOT NULL DEFAULT now(), done_at timestamptz, error text);
+      CREATE TABLE IF NOT EXISTS dlq_messages (event_id uuid PRIMARY KEY, body jsonb NOT NULL,
+        seen_at timestamptz NOT NULL DEFAULT now());
+      CREATE TABLE IF NOT EXISTS consume_log (id bigserial PRIMARY KEY, event_id uuid, action text NOT NULL,
+        receive_count int, error text, logged_at timestamptz NOT NULL DEFAULT now())`);
     const seed = await tx.query(
       "INSERT INTO shipments(id,destination) VALUES ('00000000-0000-4000-8000-000000000001','부산 물류센터') ON CONFLICT DO NOTHING RETURNING id",
     );

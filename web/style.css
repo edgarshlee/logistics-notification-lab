@@ -911,3 +911,107 @@ form.reason label {
     display: none;
   }
 }
+
+/* ── 장애 실험실 ───────────────────────── */
+.panel.lab.armed {
+  border-color: var(--st-exception);
+  box-shadow: inset 4px 0 var(--st-exception);
+}
+.lab .segmented {
+  width: fit-content;
+}
+.lab .segmented button[aria-pressed="true"] {
+  background: var(--ink);
+}
+.lab.armed .segmented button[aria-pressed="true"] {
+  background: var(--st-exception);
+}
+.lab-hint {
+  margin-top: 8px;
+  color: var(--ink-2);
+  font-size: 14px;
+  max-width: 70ch;
+}
+.lab h3 {
+  margin: 22px 0 8px;
+  padding-top: 16px;
+  border-top: 1px solid var(--line-2);
+}
+.dlq,
+.consume-log {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.dlq > li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 16px;
+  padding: 10px 0;
+  border-top: 1px solid var(--line-2);
+}
+.dlq > li:first-child {
+  border-top: 0;
+}
+.ev-actions {
+  grid-column: 1 / -1;
+  justify-content: flex-end;
+}
+.ev-actions button {
+  min-height: 32px;
+  font-size: 13px;
+}
+.cmd {
+  font-size: 13px;
+  font-weight: 600;
+}
+.cmd.pending {
+  color: #6b5400;
+}
+.cmd.ok {
+  color: var(--st-delivered);
+}
+.cmd.failed {
+  color: var(--st-exception);
+}
+.consume-log > li {
+  display: grid;
+  grid-template-columns: 76px minmax(0, 1fr) auto minmax(0, 1.4fr) auto;
+  align-items: baseline;
+  gap: 4px 12px;
+  padding: 6px 0;
+  border-top: 1px solid var(--line-2);
+  font-size: 14px;
+}
+.consume-log > li:first-child {
+  border-top: 0;
+}
+.consume-log time {
+  color: var(--ink-3);
+  font-size: 13px;
+}
+.consume-log .err {
+  overflow-wrap: anywhere;
+}
+.act {
+  font-weight: 600;
+}
+.act.created {
+  color: var(--st-delivered);
+}
+.act.duplicate {
+  color: var(--st-in_transit);
+}
+.act.failed {
+  color: var(--st-exception);
+}
+@media (max-width: 760px) {
+  .consume-log > li {
+    grid-template-columns: 76px minmax(0, 1fr) auto;
+  }
+  .consume-log .err {
+    grid-column: 2 / -1;
+  }
+}
