@@ -15,11 +15,13 @@ export async function api(path, method = "GET", body) {
   }
   if (!res.ok) {
     const message = data?.message;
-    throw Error(
+    const error = Error(
       Array.isArray(message)
         ? message.join(", ")
         : message || `요청을 처리하지 못했습니다. (HTTP ${res.status})`,
     );
+    error.status = res.status;
+    throw error;
   }
   return data;
 }

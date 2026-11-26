@@ -25,3 +25,18 @@ export const eventNames = {
 };
 export const dateTime = (value) => new Date(value).toLocaleString("ko-KR");
 export const time = (value) => new Date(value).toLocaleTimeString("ko-KR");
+export function ago(value, now = Date.now()) {
+  const s = Math.max(0, Math.round((now - Date.parse(value)) / 1000));
+  if (s < 60) return "방금";
+  if (s < 3600) return Math.floor(s / 60) + "분 전";
+  if (s < 86400) return Math.floor(s / 3600) + "시간 전";
+  return Math.floor(s / 86400) + "일 전";
+}
+// 기준 시각부터 걸린 시간: "+0.8초", "+12초", "+3분"
+export function after(from, to) {
+  const ms = Date.parse(to) - Date.parse(from);
+  if (!Number.isFinite(ms)) return "";
+  if (ms < 10000) return "+" + (Math.max(0, ms) / 1000).toFixed(1) + "초";
+  if (ms < 120000) return "+" + Math.round(ms / 1000) + "초";
+  return "+" + Math.round(ms / 60000) + "분";
+}

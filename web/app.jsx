@@ -7,8 +7,11 @@ import Operations from "./operations/Operations";
 import StatusBar from "./StatusBar";
 
 const views = ["shipments", "notifications", "operations"];
-const currentView = () =>
-  views.includes(location.hash.slice(1)) ? location.hash.slice(1) : "shipments";
+// #shipments/<id> 형식으로 선택한 배송까지 주소에 남긴다.
+function currentRoute() {
+  const [view, id] = location.hash.slice(1).split("/");
+  return views.includes(view) ? { view, id } : { view: "shipments" };
+}
 
 function Badge({ count, tone, label }) {
   if (!count) return null;
@@ -20,10 +23,11 @@ function Badge({ count, tone, label }) {
 }
 
 function App() {
-  const [view, setView] = useState(currentView);
+  const [route, setRoute] = useState(currentRoute);
+  const { view } = route;
   const { data: summary, error, reload } = usePoll("summary");
   useEffect(() => {
-    const navigate = () => setView(currentView());
+    const navigate = () => setRoute(currentRoute());
     window.addEventListener("hashchange", navigate);
     return () => window.removeEventListener("hashchange", navigate);
   }, []);
@@ -61,7 +65,7 @@ function App() {
         {view === "operations" ? (
           <Operations />
         ) : view === "shipments" ? (
-          <Shipments onChange={reload} />
+          <Shipments selectedId={route.id} onChange={reload} />
         ) : (
           <Inbox onChange={reload} />
         )}

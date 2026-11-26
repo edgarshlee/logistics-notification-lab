@@ -205,12 +205,12 @@ li {
   article:has(.actions) {
     padding-right: 270px;
   }
-  .actions {
+  article .actions {
     position: absolute;
     right: 22px;
     top: 22px;
   }
-  .actions:not(:empty) {
+  article .actions:not(:empty) {
     margin: 0;
   }
 }
@@ -311,4 +311,243 @@ h2 {
 button[aria-pressed="true"] .badge.info {
   background: #aee6f2;
   color: #153a55;
+}
+
+/* 운영자 화면: 목록 + 상세 2단 */
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0 12px;
+}
+.search {
+  flex: 0 1 280px;
+  min-width: 180px;
+}
+.mono {
+  font-family: ui-monospace, Consolas, monospace;
+  font-size: 13px;
+}
+.split {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 14px;
+  align-items: start;
+}
+@media (min-width: 900px) {
+  .split {
+    grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr);
+  }
+  .detail {
+    position: sticky;
+    top: 12px;
+  }
+  .panel .back {
+    display: none;
+  }
+}
+@media (max-width: 899px) {
+  .split.has-selection .list,
+  .split:not(.has-selection) .detail {
+    display: none;
+  }
+}
+table {
+  width: 100%;
+  border-collapse: collapse;
+  background: white;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  overflow: hidden;
+}
+th,
+td {
+  padding: 10px 12px;
+  text-align: left;
+  border-bottom: 1px solid #e3eaee;
+  white-space: nowrap;
+}
+td:nth-child(2) {
+  white-space: normal;
+  overflow-wrap: anywhere;
+  font-weight: 600;
+}
+th {
+  font-size: 13px;
+  color: #53687a;
+  background: #f6f9fa;
+}
+tbody tr {
+  cursor: pointer;
+}
+tbody tr:hover {
+  background: #f3f8fb;
+}
+tbody tr[aria-current="true"] {
+  background: #e4f1f8;
+  box-shadow: inset 4px 0 var(--blue);
+}
+tbody tr:last-child td {
+  border-bottom: 0;
+}
+td a {
+  color: inherit;
+  text-decoration: none;
+}
+td a:hover {
+  text-decoration: underline;
+}
+td .status {
+  margin: 0;
+}
+.panel,
+.hint {
+  background: white;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  padding: 18px 22px;
+  margin: 0;
+}
+.hint {
+  color: #53687a;
+}
+.panel h2 {
+  margin: 4px 0 12px;
+  font-size: 24px;
+  letter-spacing: -0.04em;
+  overflow-wrap: anywhere;
+}
+.panel h3 {
+  margin: 22px 0 6px;
+  font-size: 16px;
+}
+.back {
+  display: inline-block;
+  margin-bottom: 8px;
+  color: var(--blue);
+}
+.muted {
+  color: #6a7d8c;
+  font-size: 14px;
+}
+.notice {
+  background: #fff6e8;
+  border: 1px solid #f0c98a;
+  color: #794208;
+  padding: 8px 12px;
+  border-radius: 7px;
+}
+.reason {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.reason label {
+  flex-basis: 100%;
+  font-weight: 600;
+}
+.reason input {
+  flex: 1;
+  min-width: 160px;
+}
+.reason button:not(.plain) {
+  background: #794208;
+  border-color: #794208;
+  color: white;
+}
+.timeline {
+  list-style: none;
+  margin: 0;
+  padding: 0 0 0 18px;
+  border-left: 2px solid var(--line);
+}
+.timeline > li {
+  position: relative;
+  padding: 4px 0 14px;
+}
+.timeline > li::before {
+  content: "";
+  position: absolute;
+  left: -25px;
+  top: 10px;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: white;
+  border: 2px solid var(--blue);
+}
+.timeline > li[data-status="exception"]::before {
+  border-color: #d9822b;
+}
+.timeline > li[data-status="delivered"]::before {
+  border-color: #2f9b6a;
+  background: #2f9b6a;
+}
+.step {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 10px;
+}
+.step time {
+  margin-left: auto;
+  font-size: 13px;
+  color: #53687a;
+  font-variant-numeric: tabular-nums;
+}
+.version {
+  font-size: 12px;
+  color: #53687a;
+}
+.note {
+  margin: 4px 0;
+  padding: 4px 10px;
+  border-radius: 5px;
+  background: #fff3e0;
+  color: #794208;
+  font-size: 14px;
+  width: fit-content;
+}
+.timeline .muted {
+  margin: 4px 0 0;
+}
+.delivery {
+  list-style: none;
+  margin: 6px 0 0;
+  padding: 0;
+  font-size: 14px;
+}
+.delivery li {
+  padding: 1px 0 1px 20px;
+  position: relative;
+}
+.delivery li::before {
+  position: absolute;
+  left: 2px;
+}
+.delivery .done::before {
+  content: "✓";
+  color: #2f9b6a;
+  font-weight: 700;
+}
+.delivery .pending {
+  color: #6a7d8c;
+}
+.delivery .pending::before {
+  content: "○";
+}
+.lag {
+  margin-left: 6px;
+  color: #53687a;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+.delivery .event-id {
+  color: #8a9aa6;
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+.reason-text {
+  color: #794208;
 }

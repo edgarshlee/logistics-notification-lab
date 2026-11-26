@@ -37,7 +37,10 @@ export default function Inbox({ onChange }) {
           <article key={n.event_id} className={n.read_at ? "read" : "unread"}>
             <small>{dateTime(n.occurred_at)}</small>
             <b>{n.destination}</b>
-            <p>{eventMessages[n.event_type]}</p>
+            <p>
+              {eventMessages[n.event_type]}
+              {n.detail && <span className="reason-text"> 사유: {n.detail}</span>}
+            </p>
             {n.read_at ? (
               "읽음"
             ) : (
