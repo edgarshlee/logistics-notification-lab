@@ -66,23 +66,44 @@ async function test() {
     (await request("notifications/" + event.eventId + "/read", "PATCH")).status,
     200,
   );
+  assert.equal(
+    (await request(path, "PATCH", { version: 2, status: "exception" })).status,
+    400,
+    "exception requires a reason",
+  );
+  const reason = "수취인 부재";
   for (const [index, status] of [
     "exception",
     "in_transit",
     "delivered",
   ].entries()) {
     assert.equal(
-      (await request(path, "PATCH", { version: index + 2, status })).status,
+      (await request(path, "PATCH", { version: index + 2, status, reason }))
+        .status,
       200,
     );
   }
-  assert.equal((await (await request(path)).json()).length, 5);
+  const detail = await (await request(path)).json();
+  assert.equal(detail.shipment.status, "delivered");
+  assert.equal(detail.history.length, 5);
+  assert.equal(detail.history[2].note, reason);
+  assert.equal(detail.history[3].note, null, "reason is kept only for exceptions");
+  assert.equal(detail.history[1].event_id, event.eventId);
+  assert.equal(detail.history[3].event_id, null, "resume emits no event");
+  const found = await (
+    await request("shipments?q=" + shipment.id.slice(0, 8))
+  ).json();
+  assert.deepEqual(
+    found.map((s: any) => s.id),
+    [shipment.id],
+  );
   await until(async () => {
     const rows = (await (await request("notifications")).json()).filter(
       (n: any) => n.shipment_id === shipment.id,
     );
     return rows.length === 3 &&
-      rows.some((n: any) => n.event_id === event.eventId && n.read_at)
+      rows.some((n: any) => n.event_id === event.eventId && n.read_at) &&
+      rows.some((n: any) => n.detail === reason)
       ? true
       : undefined;
   }, "three distinct alerts including read receipt");

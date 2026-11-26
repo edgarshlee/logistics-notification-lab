@@ -41,6 +41,10 @@ export async function migrate() {
       ALTER TABLE notifications ALTER COLUMN stored_at SET DEFAULT now();
       CREATE TABLE IF NOT EXISTS dlq_replays (
         event_id uuid PRIMARY KEY, observed_at timestamptz NOT NULL DEFAULT now(), replayed_at timestamptz)`);
+    await tx.query(`ALTER TABLE history ADD COLUMN IF NOT EXISTS note text;
+      ALTER TABLE notifications ADD COLUMN IF NOT EXISTS detail text;
+      CREATE INDEX IF NOT EXISTS outbox_shipment_version
+        ON outbox (((payload->>'shipmentId')::uuid), ((payload->>'shipmentVersion')::int))`);
     const seed = await tx.query(
       "INSERT INTO shipments(id,destination) VALUES ('00000000-0000-4000-8000-000000000001','부산 물류센터') ON CONFLICT DO NOTHING RETURNING id",
     );

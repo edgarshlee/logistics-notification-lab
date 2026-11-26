@@ -10,6 +10,7 @@ import {
   ParseUUIDPipe,
   Patch,
   Post,
+  Query,
 } from "@nestjs/common";
 import { NestFactory } from "@nestjs/core";
 import { NestExpressApplication } from "@nestjs/platform-express";
@@ -20,18 +21,39 @@ import { db, events, migrate, transitions } from "./db";
 @Controller("api")
 class LogisticsController {
   @Get("shipments")
-  list() {
-    return db.query("SELECT * FROM shipments ORDER BY created_at DESC");
+  list(@Query("q") q?: string) {
+    // 도착지 부분 일치 또는 운송 번호(UUID) 앞자리 일치. LIKE 특수문자는 그대로 검색한다.
+    const term = (typeof q === "string" ? q.trim() : "").slice(0, 100);
+    const pattern = term.replace(/[\\%_]/g, "\\$&");
+    return db.query(
+      `SELECT s.*, h.occurred_at AS updated_at FROM shipments s
+      JOIN LATERAL (SELECT occurred_at FROM history WHERE shipment_id=s.id
+        ORDER BY version DESC LIMIT 1) h ON true
+      WHERE $1 = '' OR s.destination ILIKE '%' || $2 || '%' OR s.id::text LIKE lower($2) || '%'
+      ORDER BY s.created_at DESC`,
+      [term, pattern],
+    );
   }
 
   @Get("shipments/:id")
   async detail(@Param("id", ParseUUIDPipe) id: string) {
-    const history = await db.query(
-      "SELECT version,status,occurred_at FROM history WHERE shipment_id=$1 ORDER BY version",
-      [id],
-    );
-    if (!history.length) throw new NotFoundException();
-    return history;
+    const [[shipment], history] = await Promise.all([
+      db.query("SELECT * FROM shipments WHERE id=$1", [id]),
+      // 각 상태 버전이 만든 아웃박스 이벤트와 그 이벤트로 저장된 알림을 함께 조회해 추적 타임라인을 만든다.
+      db.query(
+        `SELECT h.version,h.status,h.note,h.occurred_at,
+          o.id AS event_id,o.payload->>'eventType' AS event_type,o.published_at,o.attempts,o.next_attempt,
+          n.stored_at,n.read_at
+        FROM history h
+        LEFT JOIN outbox o ON (o.payload->>'shipmentId')::uuid=h.shipment_id
+          AND (o.payload->>'shipmentVersion')::int=h.version
+        LEFT JOIN notifications n ON n.event_id=o.id AND n.recipient=o.payload->>'recipientId'
+        WHERE h.shipment_id=$1 ORDER BY h.version`,
+        [id],
+      ),
+    ]);
+    if (!shipment) throw new NotFoundException();
+    return { shipment, history };
   }
 
   @Post("shipments")
@@ -58,8 +80,18 @@ class LogisticsController {
   @Patch("shipments/:id")
   change(
     @Param("id", ParseUUIDPipe) id: string,
-    @Body() input: { status: string; version: number },
+    @Body() input: { status: string; version: number; reason?: unknown },
   ) {
+    let reason: string | null = null;
+    if (input.status === "exception") {
+      if (
+        typeof input.reason !== "string" ||
+        !input.reason.trim() ||
+        input.reason.trim().length > 100
+      )
+        throw new BadRequestException("예외 사유를 1~100자로 입력하세요.");
+      reason = input.reason.trim();
+    }
     return db.transaction(async (tx) => {
       const [current] = await tx.query(
         "SELECT * FROM shipments WHERE id=$1 FOR UPDATE",
@@ -79,8 +111,8 @@ class LogisticsController {
         version,
       ]);
       const [row] = await tx.query(
-        "INSERT INTO history(shipment_id,version,status) VALUES ($1,$2,$3) RETURNING occurred_at",
-        [id, version, input.status],
+        "INSERT INTO history(shipment_id,version,status,note) VALUES ($1,$2,$3,$4) RETURNING occurred_at",
+        [id, version, input.status, reason],
       );
       if (current.status !== "exception") {
         const eventId = randomUUID();
@@ -92,6 +124,8 @@ class LogisticsController {
           shipmentVersion: version,
           eventType: events[input.status],
           occurredAt: row.occurred_at,
+          // 선택 필드: schemaVersion 1 소비자는 알 수 없는 필드를 무시한다.
+          ...(reason && { reason }),
         };
         await tx.query("INSERT INTO outbox(id,payload) VALUES ($1,$2)", [
           eventId,

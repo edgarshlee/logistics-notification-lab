@@ -64,9 +64,16 @@ async function consume(queueUrl: string, message: Message) {
   )
     throw Error("Invalid shipment event");
   const rows = await db.query(
-    `INSERT INTO notifications(event_id,recipient,shipment_id,event_type,occurred_at)
-    VALUES ($1,$2,$3,$4,$5) ON CONFLICT DO NOTHING RETURNING event_id`,
-    [e.eventId, e.recipientId, e.shipmentId, e.eventType, e.occurredAt],
+    `INSERT INTO notifications(event_id,recipient,shipment_id,event_type,occurred_at,detail)
+    VALUES ($1,$2,$3,$4,$5,$6) ON CONFLICT DO NOTHING RETURNING event_id`,
+    [
+      e.eventId,
+      e.recipientId,
+      e.shipmentId,
+      e.eventType,
+      e.occurredAt,
+      typeof e.reason === "string" ? e.reason.slice(0, 100) : null,
+    ],
   );
   console.info(
     JSON.stringify({
